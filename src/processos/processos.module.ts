@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ProcessosService } from './processos.service';
 import { ProcessosController } from './processos.controller';
+import { LogsModule } from 'src/logs/logs.module';
 
 /**
  * Module - Organização e Injeção de Dependências
@@ -15,6 +16,7 @@ import { ProcessosController } from './processos.controller';
  * Cada módulo encapsula uma funcionalidade específica.
  */
 @Module({
+  imports: [LogsModule], // Importa LogsModule para usar LogsService
   controllers: [ProcessosController], // Controllers deste módulo
   providers: [ProcessosService],      // Services deste módulo
   exports: [ProcessosService],        // Exporta o service para uso em outros módulos

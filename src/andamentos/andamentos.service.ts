@@ -10,6 +10,7 @@ import { UpdateAndamentoDto } from './dto/update-andamento.dto';
 import { AndamentoResponseDto } from './dto/andamento-response.dto';
 import { andamento, $Enums } from '@prisma/client';
 import { AppService } from 'src/app.service';
+import { LogsService } from 'src/logs/logs.service';
 
 /**
  * Service para gerenciar andamentos de processos
@@ -22,15 +23,17 @@ export class AndamentosService {
   constructor(
     private prisma: PrismaService,
     private app: AppService,
+    private logsService: LogsService,
   ) {}
 
   /**
    * Cria um novo andamento (envia processo de uma unidade para outra)
    * 
    * @param createAndamentoDto - Dados do andamento
+   * @param usuario_id - ID do usuário que está criando o andamento
    * @returns Andamento criado
    */
-  async criar(createAndamentoDto: CreateAndamentoDto): Promise<AndamentoResponseDto> {
+  async criar(createAndamentoDto: CreateAndamentoDto, usuario_id: string): Promise<AndamentoResponseDto> {
     // Verifica se o processo existe
     const processo = await this.prisma.processo.findUnique({
       where: { id: createAndamentoDto.processo_id },
@@ -38,6 +41,15 @@ export class AndamentosService {
 
     if (!processo) {
       throw new NotFoundException('Processo não encontrado.');
+    }
+
+    // Verifica se o usuário existe
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuario_id },
+    });
+
+    if (!usuario) {
+      throw new NotFoundException('Usuário não encontrado.');
     }
 
     // Converte a string de data para Date
@@ -52,15 +64,34 @@ export class AndamentosService {
         prazo: prazo,
         status: createAndamentoDto.status || $Enums.StatusAndamento.EM_ANDAMENTO,
         observacao: createAndamentoDto.observacao,
+        usuario_id: usuario_id,
       },
       include: {
         processo: true,
+        usuario: true,
+        usuarioProrrogacao: true,
       },
     });
 
     if (!andamento) {
       throw new InternalServerErrorException('Não foi possível criar o andamento.');
     }
+
+    // Registra log
+    await this.logsService.criar(
+      $Enums.TipoAcao.ANDAMENTO_CRIADO,
+      `Andamento criado: ${andamento.origem} → ${andamento.destino} (Prazo: ${new Date(andamento.prazo).toLocaleDateString('pt-BR')})`,
+      'andamento',
+      andamento.id,
+      usuario_id,
+      null,
+      {
+        origem: andamento.origem,
+        destino: andamento.destino,
+        prazo: andamento.prazo,
+        processo_id: andamento.processo_id,
+      },
+    );
 
     return andamento;
   }
@@ -104,6 +135,8 @@ export class AndamentosService {
       take: limite,
       include: {
         processo: true,
+        usuario: true,
+        usuarioProrrogacao: true,
       },
     });
 
@@ -139,6 +172,8 @@ export class AndamentosService {
       orderBy: { criadoEm: 'desc' },
       include: {
         processo: true,
+        usuario: true,
+        usuarioProrrogacao: true,
       },
     });
 
@@ -160,6 +195,8 @@ export class AndamentosService {
       where: { id },
       include: {
         processo: true,
+        usuario: true,
+        usuarioProrrogacao: true,
       },
     });
 
@@ -176,11 +213,13 @@ export class AndamentosService {
    * 
    * @param id - ID do andamento
    * @param updateAndamentoDto - Dados a serem atualizados
+   * @param usuario_id - ID do usuário que está atualizando o andamento
    * @returns Andamento atualizado
    */
   async atualizar(
     id: string,
     updateAndamentoDto: UpdateAndamentoDto,
+    usuario_id: string,
   ): Promise<AndamentoResponseDto> {
     // Verifica se o andamento existe
     await this.buscarPorId(id);
@@ -198,12 +237,14 @@ export class AndamentosService {
     if (updateAndamentoDto.prorrogacao !== undefined) {
       if (updateAndamentoDto.prorrogacao === null) {
         data.prorrogacao = null;
+        data.usuario_prorrogacao_id = null; // Remove o usuário que prorrogou
         // Se a prorrogação foi removida e não há conclusão, volta para EM_ANDAMENTO
         if (!updateAndamentoDto.conclusao) {
           data.status = $Enums.StatusAndamento.EM_ANDAMENTO;
         }
       } else {
         data.prorrogacao = new Date(updateAndamentoDto.prorrogacao);
+        data.usuario_prorrogacao_id = usuario_id; // Registra quem prorrogou
         // Só atualiza status para PRORROGADO se não houver conclusão
         if (!updateAndamentoDto.conclusao) {
           data.status = $Enums.StatusAndamento.PRORROGADO;
@@ -227,14 +268,58 @@ export class AndamentosService {
     }
     
 
+    // Busca dados antigos para log
+    const andamentoAntigo = await this.prisma.andamento.findUnique({
+      where: { id },
+    });
+
     // Atualiza o andamento
     const andamentoAtualizado = await this.prisma.andamento.update({
       where: { id },
       data,
       include: {
         processo: true,
+        usuario: true,
+        usuarioProrrogacao: true,
       },
     });
+
+    // Determina o tipo de ação para o log
+    let tipoAcao: $Enums.TipoAcao = $Enums.TipoAcao.ANDAMENTO_ATUALIZADO;
+    let descricao = `Andamento atualizado: ${andamentoAtualizado.origem} → ${andamentoAtualizado.destino}`;
+
+    if (updateAndamentoDto.prorrogacao !== undefined && updateAndamentoDto.prorrogacao !== null) {
+      tipoAcao = $Enums.TipoAcao.ANDAMENTO_PRORROGADO;
+      descricao = `Andamento prorrogado: ${andamentoAtualizado.origem} → ${andamentoAtualizado.destino} (Nova data: ${new Date(andamentoAtualizado.prorrogacao).toLocaleDateString('pt-BR')})`;
+    } else if (updateAndamentoDto.conclusao !== undefined && updateAndamentoDto.conclusao !== null) {
+      tipoAcao = $Enums.TipoAcao.ANDAMENTO_CONCLUIDO;
+      descricao = `Andamento concluído: ${andamentoAtualizado.origem} → ${andamentoAtualizado.destino}`;
+    }
+
+    // Registra log
+    await this.logsService.criar(
+      tipoAcao,
+      descricao,
+      'andamento',
+      andamentoAtualizado.id,
+      usuario_id,
+      andamentoAntigo ? {
+        origem: andamentoAntigo.origem,
+        destino: andamentoAntigo.destino,
+        prazo: andamentoAntigo.prazo,
+        prorrogacao: andamentoAntigo.prorrogacao,
+        conclusao: andamentoAntigo.conclusao,
+        status: andamentoAntigo.status,
+      } : null,
+      {
+        origem: andamentoAtualizado.origem,
+        destino: andamentoAtualizado.destino,
+        prazo: andamentoAtualizado.prazo,
+        prorrogacao: andamentoAtualizado.prorrogacao,
+        conclusao: andamentoAtualizado.conclusao,
+        status: andamentoAtualizado.status,
+      },
+    );
 
     return andamentoAtualizado;
   }
@@ -243,9 +328,10 @@ export class AndamentosService {
    * Marca um andamento como concluído
    * 
    * @param id - ID do andamento
+   * @param usuario_id - ID do usuário que está concluindo o andamento
    * @returns Andamento atualizado
    */
-  async concluir(id: string): Promise<AndamentoResponseDto> {
+  async concluir(id: string, usuario_id: string): Promise<AndamentoResponseDto> {
     const andamento = await this.buscarPorId(id);
 
     if (andamento.status === $Enums.StatusAndamento.CONCLUIDO) {
@@ -255,7 +341,7 @@ export class AndamentosService {
     return this.atualizar(id, {
       conclusao: new Date().toISOString(),
       status: $Enums.StatusAndamento.CONCLUIDO,
-    });
+    }, usuario_id);
   }
 
   /**
@@ -263,9 +349,10 @@ export class AndamentosService {
    * 
    * @param id - ID do andamento
    * @param novaDataLimite - Nova data limite
+   * @param usuario_id - ID do usuário que está prorrogando o andamento
    * @returns Andamento atualizado
    */
-  async prorrogar(id: string, novaDataLimite: string): Promise<AndamentoResponseDto> {
+  async prorrogar(id: string, novaDataLimite: string, usuario_id: string): Promise<AndamentoResponseDto> {
     const andamento = await this.buscarPorId(id);
 
     const novaData = new Date(novaDataLimite);
@@ -278,21 +365,38 @@ export class AndamentosService {
     return this.atualizar(id, {
       prorrogacao: novaDataLimite,
       status: $Enums.StatusAndamento.PRORROGADO,
-    });
+    }, usuario_id);
   }
 
   /**
    * Remove um andamento
    * 
    * @param id - ID do andamento
+   * @param usuario_id - ID do usuário que está removendo o andamento
    * @returns Confirmação de remoção
    */
-  async remover(id: string): Promise<{ removido: boolean }> {
-    await this.buscarPorId(id);
+  async remover(id: string, usuario_id: string): Promise<{ removido: boolean }> {
+    const andamento = await this.buscarPorId(id);
 
     await this.prisma.andamento.delete({
       where: { id },
     });
+
+    // Registra log
+    await this.logsService.criar(
+      $Enums.TipoAcao.ANDAMENTO_REMOVIDO,
+      `Andamento removido: ${andamento.origem} → ${andamento.destino}`,
+      'andamento',
+      id,
+      usuario_id,
+      {
+        origem: andamento.origem,
+        destino: andamento.destino,
+        prazo: andamento.prazo,
+        processo_id: andamento.processo_id,
+      },
+      null,
+    );
 
     return { removido: true };
   }

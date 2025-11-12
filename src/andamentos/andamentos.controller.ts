@@ -14,6 +14,8 @@ import { UpdateAndamentoDto } from './dto/update-andamento.dto';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AndamentoResponseDto } from './dto/andamento-response.dto';
 import { Permissoes } from 'src/auth/decorators/permissoes.decorator';
+import { UsuarioAtual } from 'src/auth/decorators/usuario-atual.decorator';
+import { Usuario } from '@prisma/client';
 
 @ApiTags('Andamentos')
 @ApiBearerAuth()
@@ -29,8 +31,11 @@ export class AndamentosController {
   @Post()
   @ApiOperation({ summary: 'Cria um novo andamento' })
   @ApiResponse({ status: 201, description: 'Andamento criado com sucesso', type: AndamentoResponseDto })
-  criar(@Body() createAndamentoDto: CreateAndamentoDto): Promise<AndamentoResponseDto> {
-    return this.andamentosService.criar(createAndamentoDto);
+  criar(
+    @Body() createAndamentoDto: CreateAndamentoDto,
+    @UsuarioAtual() usuario: Usuario,
+  ): Promise<AndamentoResponseDto> {
+    return this.andamentosService.criar(createAndamentoDto, usuario.id);
   }
 
   /**
@@ -90,8 +95,9 @@ export class AndamentosController {
   atualizar(
     @Param('id') id: string,
     @Body() updateAndamentoDto: UpdateAndamentoDto,
+    @UsuarioAtual() usuario: Usuario,
   ): Promise<AndamentoResponseDto> {
-    return this.andamentosService.atualizar(id, updateAndamentoDto);
+    return this.andamentosService.atualizar(id, updateAndamentoDto, usuario.id);
   }
 
   /**
@@ -102,8 +108,11 @@ export class AndamentosController {
   @Patch(':id/concluir')
   @ApiOperation({ summary: 'Marca um andamento como concluído' })
   @ApiResponse({ status: 200, description: 'Andamento concluído', type: AndamentoResponseDto })
-  concluir(@Param('id') id: string): Promise<AndamentoResponseDto> {
-    return this.andamentosService.concluir(id);
+  concluir(
+    @Param('id') id: string,
+    @UsuarioAtual() usuario: Usuario,
+  ): Promise<AndamentoResponseDto> {
+    return this.andamentosService.concluir(id, usuario.id);
   }
 
   /**
@@ -117,8 +126,9 @@ export class AndamentosController {
   prorrogar(
     @Param('id') id: string,
     @Body('novaDataLimite') novaDataLimite: string,
+    @UsuarioAtual() usuario: Usuario,
   ): Promise<AndamentoResponseDto> {
-    return this.andamentosService.prorrogar(id, novaDataLimite);
+    return this.andamentosService.prorrogar(id, novaDataLimite, usuario.id);
   }
 
   /**
@@ -129,8 +139,11 @@ export class AndamentosController {
   @Delete(':id')
   @ApiOperation({ summary: 'Remove um andamento' })
   @ApiResponse({ status: 200, description: 'Andamento removido' })
-  remover(@Param('id') id: string): Promise<{ removido: boolean }> {
-    return this.andamentosService.remover(id);
+  remover(
+    @Param('id') id: string,
+    @UsuarioAtual() usuario: Usuario,
+  ): Promise<{ removido: boolean }> {
+    return this.andamentosService.remover(id, usuario.id);
   }
 }
 

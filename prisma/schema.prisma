@@ -22,6 +22,18 @@ enum StatusAndamento {
   PRORROGADO // Prazo foi prorrogado, nova data limite definida
 }
 
+// Enum: Tipos de ações registradas no log do sistema - Define os tipos de operações que podem ser registradas
+enum TipoAcao {
+  PROCESSO_CRIADO // Processo foi criado no sistema
+  PROCESSO_ATUALIZADO // Processo foi atualizado (número SEI ou assunto alterado)
+  PROCESSO_REMOVIDO // Processo foi removido do sistema
+  ANDAMENTO_CRIADO // Andamento foi criado (processo enviado de uma unidade para outra)
+  ANDAMENTO_ATUALIZADO // Andamento foi atualizado (origem, destino, prazo ou observação alterados)
+  ANDAMENTO_PRORROGADO // Prazo do andamento foi prorrogado
+  ANDAMENTO_CONCLUIDO // Andamento foi concluído (processo retornado)
+  ANDAMENTO_REMOVIDO // Andamento foi removido do sistema
+}
+
 // Model: Usuario | Tabela: usuarios | Descrição: Armazena informações dos usuários do sistema (servidores da secretaria)
 model Usuario {
   id         String    @id @default(uuid()) // ID único do usuário (UUID gerado automaticamente) - Chave primária
@@ -36,6 +48,10 @@ model Usuario {
   ultimoLogin  DateTime @default(now()) // Data e hora do último login do usuário no sistema - DateTime - Valor padrão: Data/hora atual (atualizado a cada login)
   criadoEm     DateTime @default(now()) // Data e hora de criação do registro do usuário - DateTime - Valor padrão: Data/hora atual (definido apenas na criação)
   atualizadoEm DateTime @default(now()) @updatedAt // Data e hora da última atualização do registro - DateTime - Atualizado automaticamente a cada modificação
+
+  andamentosCriados     andamento[] @relation("AndamentoCriadoPor") // Lista de andamentos criados por este usuário - Array de andamento - Histórico de andamentos criados pelo usuário
+  andamentosProrrogados andamento[] @relation("AndamentoProrrogadoPor") // Lista de andamentos prorrogados por este usuário - Array de andamento - Histórico de andamentos prorrogados pelo usuário
+  logs                  Log[] // Lista de logs de ações realizadas por este usuário - Array de Log - Histórico completo de ações do usuário no sistema
 
   @@map("usuarios")
 }
@@ -54,18 +70,42 @@ model processo {
 
 // Model: andamento | Tabela: andamentos | Descrição: Armazena o histórico de movimentações dos processos entre unidades, controlando prazos e status
 model andamento {
-  id           String          @id @default(uuid()) // ID único do andamento (UUID gerado automaticamente) - Chave primária
-  origem       String // Unidade de origem (de onde o processo está saindo) - String - Obrigatório - Nome ou sigla da unidade que está enviando o processo - Exemplo: "EXPEDIENTE", "COORDENADORIA_JURIDICA"
-  destino      String // Unidade de destino (para onde o processo está indo) - String - Obrigatório - Nome ou sigla da unidade que receberá o processo - Exemplo: "COORDENADORIA_JURIDICA", "GABINETE"
-  prazo        DateTime        @default(now()) // Data limite para retorno do processo à unidade de origem - DateTime - Obrigatório - Valor padrão: Data/hora atual (deve ser ajustado ao criar) - Data até a qual o processo deve ser retornado. Se não retornado até esta data, está em atraso
-  prorrogacao  DateTime? // Nova data limite caso o processo tenha sido prorrogado - DateTime (opcional) - Se preenchido, indica que o prazo foi prorrogado e esta é a nova data limite - Observação: Quando preenchido, o status deve ser alterado para PRORROGADO
-  conclusao    DateTime? // Data em que o processo foi concluído e retornado à unidade de origem - DateTime (opcional) - Data em que o processo foi finalizado e devolvido. Se preenchido, o status deve ser CONCLUIDO
-  status       StatusAndamento @default(EM_ANDAMENTO) // Status atual do andamento - Enum (StatusAndamento) - Valor padrão: EM_ANDAMENTO - Valores: EM_ANDAMENTO (em tramitação), CONCLUIDO (concluído e retornado), PRORROGADO (prazo prorrogado)
-  observacao   String? // Observações sobre o andamento - String (opcional) - Campo livre para anotações, justificativas de prorrogação, ou outras informações relevantes
-  criadoEm     DateTime        @default(now()) // Data e hora de criação do registro do andamento - DateTime - Valor padrão: Data/hora atual (definido apenas na criação) - Representa a data em que o processo foi enviado da origem para o destino
-  atualizadoEm DateTime        @default(now()) @updatedAt // Data e hora da última atualização do registro - DateTime - Atualizado automaticamente a cada modificação
-  processo_id  String // ID do processo relacionado (chave estrangeira) - String (UUID) - Obrigatório - Referência ao processo ao qual este andamento pertence
-  processo     processo        @relation(fields: [processo_id], references: [id]) // Relacionamento com o modelo processo - Processo ao qual este andamento está vinculado
+  id                     String          @id @default(uuid()) // ID único do andamento (UUID gerado automaticamente) - Chave primária
+  origem                 String // Unidade de origem (de onde o processo está saindo) - String - Obrigatório - Nome ou sigla da unidade que está enviando o processo - Exemplo: "EXPEDIENTE", "COORDENADORIA_JURIDICA"
+  destino                String // Unidade de destino (para onde o processo está indo) - String - Obrigatório - Nome ou sigla da unidade que receberá o processo - Exemplo: "COORDENADORIA_JURIDICA", "GABINETE"
+  prazo                  DateTime        @default(now()) // Data limite para retorno do processo à unidade de origem - DateTime - Obrigatório - Valor padrão: Data/hora atual (deve ser ajustado ao criar) - Data até a qual o processo deve ser retornado. Se não retornado até esta data, está em atraso
+  prorrogacao            DateTime? // Nova data limite caso o processo tenha sido prorrogado - DateTime (opcional) - Se preenchido, indica que o prazo foi prorrogado e esta é a nova data limite - Observação: Quando preenchido, o status deve ser alterado para PRORROGADO
+  conclusao              DateTime? // Data em que o processo foi concluído e retornado à unidade de origem - DateTime (opcional) - Data em que o processo foi finalizado e devolvido. Se preenchido, o status deve ser CONCLUIDO
+  status                 StatusAndamento @default(EM_ANDAMENTO) // Status atual do andamento - Enum (StatusAndamento) - Valor padrão: EM_ANDAMENTO - Valores: EM_ANDAMENTO (em tramitação), CONCLUIDO (concluído e retornado), PRORROGADO (prazo prorrogado)
+  observacao             String? // Observações sobre o andamento - String (opcional) - Campo livre para anotações, justificativas de prorrogação, ou outras informações relevantes
+  criadoEm               DateTime        @default(now()) // Data e hora de criação do registro do andamento - DateTime - Valor padrão: Data/hora atual (definido apenas na criação) - Representa a data em que o processo foi enviado da origem para o destino
+  atualizadoEm           DateTime        @default(now()) @updatedAt // Data e hora da última atualização do registro - DateTime - Atualizado automaticamente a cada modificação
+  processo_id            String // ID do processo relacionado (chave estrangeira) - String (UUID) - Obrigatório - Referência ao processo ao qual este andamento pertence
+  processo               processo        @relation(fields: [processo_id], references: [id]) // Relacionamento com o modelo processo - Processo ao qual este andamento está vinculado
+  usuario_id             String // ID do usuário que criou o andamento (chave estrangeira) - String (UUID) - Obrigatório - Referência ao usuário que criou este andamento
+  usuario                Usuario         @relation("AndamentoCriadoPor", fields: [usuario_id], references: [id]) // Relacionamento com o modelo Usuario - Usuário que criou este andamento
+  usuario_prorrogacao_id String? // ID do usuário que prorrogou o prazo (chave estrangeira) - String (UUID) - Opcional - Referência ao usuário que prorrogou este andamento - Só preenchido quando há prorrogação
+  usuarioProrrogacao     Usuario?        @relation("AndamentoProrrogadoPor", fields: [usuario_prorrogacao_id], references: [id]) // Relacionamento com o modelo Usuario - Usuário que prorrogou este andamento
 
   @@map("andamentos")
+}
+
+// Model: Log | Tabela: logs | Descrição: Armazena o histórico de todas as ações realizadas no sistema para auditoria e rastreabilidade
+model Log {
+  id           String   @id @default(uuid()) // ID único do log (UUID gerado automaticamente) - Chave primária
+  tipoAcao     TipoAcao // Tipo de ação realizada - Enum (TipoAcao) - Obrigatório - Define qual tipo de operação foi realizada
+  descricao    String   @db.Text // Descrição detalhada da ação realizada - String (TEXT no banco) - Obrigatório - Descrição completa do que foi feito, incluindo dados relevantes
+  entidadeTipo String // Tipo da entidade afetada (processo, andamento, etc.) - String - Obrigatório - Identifica qual tipo de entidade foi afetada pela ação - Exemplo: "processo", "andamento"
+  entidadeId   String // ID da entidade afetada - String (UUID) - Obrigatório - ID da entidade que foi criada, atualizada ou removida
+  dadosAntigos String?  @db.Text // Dados anteriores (em JSON) antes da alteração - String (TEXT no banco) - Opcional - Armazena o estado anterior da entidade em formato JSON para comparação
+  dadosNovos   String?  @db.Text // Dados novos (em JSON) após a alteração - String (TEXT no banco) - Opcional - Armazena o novo estado da entidade em formato JSON
+  criadoEm     DateTime @default(now()) // Data e hora em que a ação foi realizada - DateTime - Valor padrão: Data/hora atual - Timestamp exato da ação
+  usuario_id   String // ID do usuário que realizou a ação (chave estrangeira) - String (UUID) - Obrigatório - Referência ao usuário que executou a ação
+  usuario      Usuario  @relation(fields: [usuario_id], references: [id]) // Relacionamento com o modelo Usuario - Usuário que realizou a ação
+
+  @@index([usuario_id])
+  @@index([entidadeTipo, entidadeId])
+  @@index([tipoAcao])
+  @@index([criadoEm])
+  @@map("logs")
 }

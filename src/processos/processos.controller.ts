@@ -14,6 +14,8 @@ import { UpdateProcessoDto } from './dto/update-processo.dto';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ProcessoResponseDto, ProcessoPaginadoResponseDto } from './dto/processo-response.dto';
 import { Permissoes } from 'src/auth/decorators/permissoes.decorator';
+import { UsuarioAtual } from 'src/auth/decorators/usuario-atual.decorator';
+import { Usuario } from '@prisma/client';
 
 /**
  * Controller - Camada de Apresentação/HTTP
@@ -46,8 +48,11 @@ export class ProcessosController {
   @ApiOperation({ summary: 'Cria um novo processo' })
   @ApiResponse({ status: 201, description: 'Processo criado com sucesso', type: ProcessoResponseDto })
   @ApiResponse({ status: 400, description: 'Dados inválidos' })
-  criar(@Body() createProcessoDto: CreateProcessoDto): Promise<ProcessoResponseDto> {
-    return this.processosService.criar(createProcessoDto);
+  criar(
+    @Body() createProcessoDto: CreateProcessoDto,
+    @UsuarioAtual() usuario: Usuario,
+  ): Promise<ProcessoResponseDto> {
+    return this.processosService.criar(createProcessoDto, usuario.id);
   }
 
   /**
@@ -123,8 +128,9 @@ export class ProcessosController {
   atualizar(
     @Param('id') id: string,
     @Body() updateProcessoDto: UpdateProcessoDto,
+    @UsuarioAtual() usuario: Usuario,
   ): Promise<ProcessoResponseDto> {
-    return this.processosService.atualizar(id, updateProcessoDto);
+    return this.processosService.atualizar(id, updateProcessoDto, usuario.id);
   }
 
   /**
@@ -139,8 +145,11 @@ export class ProcessosController {
   @ApiOperation({ summary: 'Remove um processo' })
   @ApiResponse({ status: 200, description: 'Processo removido' })
   @ApiResponse({ status: 404, description: 'Processo não encontrado' })
-  remover(@Param('id') id: string): Promise<{ removido: boolean }> {
-    return this.processosService.remover(id);
+  remover(
+    @Param('id') id: string,
+    @UsuarioAtual() usuario: Usuario,
+  ): Promise<{ removido: boolean }> {
+    return this.processosService.remover(id, usuario.id);
   }
 }
 

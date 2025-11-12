@@ -10,6 +10,7 @@ import { UpdateProcessoDto } from './dto/update-processo.dto';
 import { ProcessoResponseDto, ProcessoPaginadoResponseDto } from './dto/processo-response.dto';
 import { processo, $Enums } from '@prisma/client';
 import { AppService } from 'src/app.service';
+import { LogsService } from 'src/logs/logs.service';
 
 /**
  * Service - Camada de Lógica de Negócio
@@ -29,15 +30,17 @@ export class ProcessosService {
   constructor(
     private prisma: PrismaService, // Injeção de dependência do Prisma
     private app: AppService,      // Serviço auxiliar para paginação
+    private logsService: LogsService, // Serviço de logs
   ) {}
 
   /**
    * Cria um novo processo
    * 
    * @param createProcessoDto - Dados do processo a ser criado
+   * @param usuario_id - ID do usuário que está criando o processo
    * @returns Processo criado
    */
-  async criar(createProcessoDto: CreateProcessoDto): Promise<ProcessoResponseDto> {
+  async criar(createProcessoDto: CreateProcessoDto, usuario_id: string): Promise<ProcessoResponseDto> {
     // Verifica se já existe um processo com o mesmo número SEI
     const processoExistente = await this.prisma.processo.findUnique({
       where: { numero_sei: createProcessoDto.numero_sei },
@@ -58,6 +61,17 @@ export class ProcessosService {
     if (!processo) {
       throw new InternalServerErrorException('Não foi possível criar o processo.');
     }
+
+    // Registra log
+    await this.logsService.criar(
+      $Enums.TipoAcao.PROCESSO_CRIADO,
+      `Processo criado: ${processo.numero_sei} - ${processo.assunto}`,
+      'processo',
+      processo.id,
+      usuario_id,
+      null,
+      { numero_sei: processo.numero_sei, assunto: processo.assunto },
+    );
 
     return processo;
   }
@@ -244,11 +258,13 @@ export class ProcessosService {
    * 
    * @param id - ID do processo a ser atualizado
    * @param updateProcessoDto - Dados a serem atualizados
+   * @param usuario_id - ID do usuário que está atualizando o processo
    * @returns Processo atualizado
    */
   async atualizar(
     id: string,
     updateProcessoDto: UpdateProcessoDto,
+    usuario_id: string,
   ): Promise<ProcessoResponseDto> {
     // Verifica se o processo existe
     const processoExistente = await this.buscarPorId(id);
@@ -275,6 +291,17 @@ export class ProcessosService {
       },
     });
 
+    // Registra log
+    await this.logsService.criar(
+      $Enums.TipoAcao.PROCESSO_ATUALIZADO,
+      `Processo atualizado: ${processoAtualizado.numero_sei} - ${processoAtualizado.assunto}`,
+      'processo',
+      processoAtualizado.id,
+      usuario_id,
+      { numero_sei: processoExistente.numero_sei, assunto: processoExistente.assunto },
+      { numero_sei: processoAtualizado.numero_sei, assunto: processoAtualizado.assunto },
+    );
+
     return processoAtualizado;
   }
 
@@ -282,17 +309,40 @@ export class ProcessosService {
    * Remove um processo (soft delete - apenas marca como removido)
    * 
    * @param id - ID do processo a ser removido
+   * @param usuario_id - ID do usuário que está removendo o processo
    * @returns Confirmação de remoção
    */
-  async remover(id: string): Promise<{ removido: boolean }> {
+  async remover(id: string, usuario_id: string): Promise<{ removido: boolean }> {
     // Verifica se o processo existe
-    await this.buscarPorId(id);
+    const processo = await this.buscarPorId(id);
+
+    // Verifica se há andamentos relacionados
+    const andamentos = await this.prisma.andamento.findMany({
+      where: { processo_id: id },
+    });
+
+    if (andamentos.length > 0) {
+      throw new BadRequestException(
+        `Não é possível remover o processo pois existem ${andamentos.length} andamento(s) relacionado(s). Remova os andamentos primeiro.`,
+      );
+    }
 
     // Remove o processo (hard delete - remove do banco)
     // Se quiser soft delete, você pode adicionar um campo "deletado" no schema
     await this.prisma.processo.delete({
       where: { id },
     });
+
+    // Registra log
+    await this.logsService.criar(
+      $Enums.TipoAcao.PROCESSO_REMOVIDO,
+      `Processo removido: ${processo.numero_sei} - ${processo.assunto}`,
+      'processo',
+      id,
+      usuario_id,
+      { numero_sei: processo.numero_sei, assunto: processo.assunto },
+      null,
+    );
 
     return { removido: true };
   }
