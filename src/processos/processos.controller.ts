@@ -46,6 +46,17 @@ export class ProcessosController {
   constructor(private readonly processosService: ProcessosService) {}
 
   /**
+   * GET /processos/origens/autocomplete
+   * Autocomplete de unidade de origem
+   * @param q termo digitado
+   * @returns lista de strings
+   */
+  @Get('origens/autocomplete')
+  async autocompleteOrigens(@Query('q') q: string) {
+    return this.processosService.autocompleteOrigens(q);
+  }
+
+  /**
    * POST /processos
    * Cria um novo processo
    *

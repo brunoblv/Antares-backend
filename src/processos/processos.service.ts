@@ -1,3 +1,4 @@
+// ...existing code...
 import {
   Injectable,
   NotFoundException,
@@ -39,6 +40,25 @@ export class ProcessosService {
   ) {}
 
   /**
+   * Busca sugestões de unidade de origem para autocomplete
+   * @param q termo digitado
+   * @returns lista de strings
+   */
+  async autocompleteOrigens(q: string): Promise<string[]> {
+    if (!q || q.trim() === '') return [];
+    const results = await this.prisma.origemProcesso.findMany({
+      where: {
+        valor: {
+          contains: q,
+        },
+      },
+      orderBy: { valor: 'asc' },
+      take: 10,
+    });
+    return results.map((o) => o.valor);
+  }
+
+  /**
    * Cria um novo processo
    *
    * @param createProcessoDto - Dados do processo a ser criado
@@ -68,6 +88,15 @@ export class ProcessosService {
       throw new BadRequestException(
         'Já existe um processo com este número SEI.',
       );
+    }
+
+    // Salva a origem digitada em OrigemProcesso se não existir
+    if (createProcessoDto.origem && createProcessoDto.origem.trim() !== '') {
+      await this.prisma.origemProcesso.upsert({
+        where: { valor: createProcessoDto.origem.trim() },
+        update: {},
+        create: { valor: createProcessoDto.origem.trim() },
+      });
     }
 
     // Cria o processo no banco de dados

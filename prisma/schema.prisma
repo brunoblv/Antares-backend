@@ -1,3 +1,11 @@
+// Model: OrigemProcesso | Tabela: origens_processo | Descrição: Armazena valores únicos de unidade de origem digitados nos processos para autocomplete
+model OrigemProcesso {
+  id     String  @id @default(uuid()) // ID único
+  valor  String  @unique // Valor da unidade de origem digitado (texto livre, único)
+  criadoEm DateTime @default(now()) // Data/hora de criação
+
+  @@map("origens_processo")
+}
 generator client {
   provider = "prisma-client-js"
 }
