@@ -11,7 +11,13 @@ import {
 import { AndamentosService } from './andamentos.service';
 import { CreateAndamentoDto } from './dto/create-andamento.dto';
 import { UpdateAndamentoDto } from './dto/update-andamento.dto';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { BatchAndamentoDto } from './dto/batch-andamento.dto';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { AndamentoResponseDto } from './dto/andamento-response.dto';
 import { Permissoes } from 'src/auth/decorators/permissoes.decorator';
 import { UsuarioAtual } from 'src/auth/decorators/usuario-atual.decorator';
@@ -30,7 +36,11 @@ export class AndamentosController {
   @Permissoes('ADM', 'TEC')
   @Post()
   @ApiOperation({ summary: 'Cria um novo andamento' })
-  @ApiResponse({ status: 201, description: 'Andamento criado com sucesso', type: AndamentoResponseDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Andamento criado com sucesso',
+    type: AndamentoResponseDto,
+  })
   criar(
     @Body() createAndamentoDto: CreateAndamentoDto,
     @UsuarioAtual() usuario: Usuario,
@@ -41,7 +51,7 @@ export class AndamentosController {
   /**
    * GET /andamentos
    * Lista todos os andamentos com paginação
-   * 
+   *
    * Query params:
    * - pagina: número da página
    * - limite: itens por página
@@ -57,7 +67,12 @@ export class AndamentosController {
     @Query('processo_id') processo_id?: string,
     @Query('status') status?: string,
   ) {
-    return this.andamentosService.buscarTudo(+pagina, +limite, processo_id, status);
+    return this.andamentosService.buscarTudo(
+      +pagina,
+      +limite,
+      processo_id,
+      status,
+    );
   }
 
   /**
@@ -67,8 +82,14 @@ export class AndamentosController {
   @Permissoes('ADM', 'TEC', 'USR')
   @Get('processo/:processo_id')
   @ApiOperation({ summary: 'Busca andamentos de um processo' })
-  @ApiResponse({ status: 200, description: 'Lista de andamentos', type: [AndamentoResponseDto] })
-  buscarPorProcesso(@Param('processo_id') processo_id: string): Promise<AndamentoResponseDto[]> {
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de andamentos',
+    type: [AndamentoResponseDto],
+  })
+  buscarPorProcesso(
+    @Param('processo_id') processo_id: string,
+  ): Promise<AndamentoResponseDto[]> {
     return this.andamentosService.buscarPorProcesso(processo_id);
   }
 
@@ -79,7 +100,11 @@ export class AndamentosController {
   @Permissoes('ADM', 'TEC', 'USR')
   @Get(':id')
   @ApiOperation({ summary: 'Busca um andamento por ID' })
-  @ApiResponse({ status: 200, description: 'Andamento encontrado', type: AndamentoResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Andamento encontrado',
+    type: AndamentoResponseDto,
+  })
   buscarPorId(@Param('id') id: string): Promise<AndamentoResponseDto> {
     return this.andamentosService.buscarPorId(id);
   }
@@ -91,7 +116,11 @@ export class AndamentosController {
   @Permissoes('ADM', 'TEC')
   @Patch(':id')
   @ApiOperation({ summary: 'Atualiza um andamento' })
-  @ApiResponse({ status: 200, description: 'Andamento atualizado', type: AndamentoResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Andamento atualizado',
+    type: AndamentoResponseDto,
+  })
   atualizar(
     @Param('id') id: string,
     @Body() updateAndamentoDto: UpdateAndamentoDto,
@@ -107,7 +136,11 @@ export class AndamentosController {
   @Permissoes('ADM', 'TEC')
   @Patch(':id/concluir')
   @ApiOperation({ summary: 'Marca um andamento como concluído' })
-  @ApiResponse({ status: 200, description: 'Andamento concluído', type: AndamentoResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Andamento concluído',
+    type: AndamentoResponseDto,
+  })
   concluir(
     @Param('id') id: string,
     @UsuarioAtual() usuario: Usuario,
@@ -122,7 +155,11 @@ export class AndamentosController {
   @Permissoes('ADM', 'TEC')
   @Patch(':id/prorrogar')
   @ApiOperation({ summary: 'Prorroga um andamento' })
-  @ApiResponse({ status: 200, description: 'Andamento prorrogado', type: AndamentoResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Andamento prorrogado',
+    type: AndamentoResponseDto,
+  })
   prorrogar(
     @Param('id') id: string,
     @Body('novaDataLimite') novaDataLimite: string,
@@ -145,5 +182,19 @@ export class AndamentosController {
   ): Promise<{ removido: boolean }> {
     return this.andamentosService.remover(id, usuario.id);
   }
-}
 
+  /**
+   * POST /andamentos/lote
+   * Realiza operações em lote em andamentos (excluir, prorrogar, concluir)
+   */
+  @Permissoes('ADM', 'TEC')
+  @Post('lote')
+  @ApiOperation({ summary: 'Operações em lote em andamentos' })
+  @ApiResponse({ status: 200, description: 'Operações realizadas com sucesso' })
+  lote(
+    @Body() batchAndamentoDto: BatchAndamentoDto,
+    @UsuarioAtual() usuario: Usuario,
+  ): Promise<{ processados: number; erros: string[] }> {
+    return this.andamentosService.lote(batchAndamentoDto, usuario.id);
+  }
+}

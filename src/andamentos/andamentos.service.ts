@@ -7,6 +7,7 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateAndamentoDto } from './dto/create-andamento.dto';
 import { UpdateAndamentoDto } from './dto/update-andamento.dto';
+import { BatchAndamentoDto } from './dto/batch-andamento.dto';
 import { AndamentoResponseDto } from './dto/andamento-response.dto';
 import { andamento, $Enums } from '@prisma/client';
 import { AppService } from 'src/app.service';
@@ -222,7 +223,7 @@ export class AndamentosService {
     });
 
     if (!andamento || !andamento.ativo) {
-      throw new NotFoundException('Andamento não encontrado.');
+      throw new NotFoundException(`Andamento não encontrado ou inativo: ${id}`);
     }
 
     return andamento;
@@ -566,5 +567,72 @@ export class AndamentosService {
     );
 
     return { removido: true };
+  }
+
+  /**
+   * Realiza operações em lote em andamentos (excluir, prorrogar, concluir)
+   *
+   * @param batchAndamentoDto - Dados da operação em lote
+   * @param usuario_id - ID do usuário que está realizando a operação
+   * @returns Número de andamentos processados e lista de erros
+   */
+  async lote(
+    batchAndamentoDto: BatchAndamentoDto,
+    usuario_id: string,
+  ): Promise<{ processados: number; erros: string[] }> {
+    const { ids, operacao, novaDataLimite } = batchAndamentoDto;
+    const erros: string[] = [];
+    let processados = 0;
+
+    // Verifica se ids é um array
+    if (!Array.isArray(ids)) {
+      throw new BadRequestException(
+        `Campo 'ids' deve ser um array. Recebido: ${typeof ids}`,
+      );
+    }
+
+    // Validações iniciais
+    if (operacao === 'prorrogar' && !novaDataLimite) {
+      throw new BadRequestException(
+        'Nova data limite é obrigatória para prorrogação.',
+      );
+    }
+
+    // Regex para validar formato de UUID
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    // Processa cada ID (operações independentes)
+    for (const id of ids) {
+      // Valida se o ID tem formato de UUID válido
+      if (!uuidRegex.test(id)) {
+        erros.push(`ID inválido (formato incorreto): ${id}`);
+        continue;
+      }
+
+      try {
+        switch (operacao) {
+          case 'excluir':
+            await this.remover(id, usuario_id);
+            break;
+          case 'prorrogar':
+            await this.prorrogar(id, novaDataLimite!, usuario_id);
+            break;
+          case 'concluir':
+            await this.concluir(id, usuario_id);
+            break;
+          default:
+            erros.push(`Operação inválida para ID ${id}: ${operacao}`);
+            continue;
+        }
+        processados++;
+      } catch (error) {
+        erros.push(
+          `Erro ao processar ID ${id} na operação ${operacao}: ${error.message}`,
+        );
+      }
+    }
+
+    return { processados, erros };
   }
 }
