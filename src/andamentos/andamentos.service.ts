@@ -580,33 +580,19 @@ export class AndamentosService {
     batchAndamentoDto: BatchAndamentoDto,
     usuario_id: string,
   ): Promise<{ processados: number; erros: string[] }> {
-    // Log para debug
-    console.log('[LOTE] Recebido payload:', JSON.stringify(batchAndamentoDto));
-    console.log('[LOTE] Tipo de batchAndamentoDto:', typeof batchAndamentoDto);
-    console.log(
-      '[LOTE] Tipo de batchAndamentoDto.ids:',
-      typeof batchAndamentoDto.ids,
-    );
-    console.log(
-      '[LOTE] Array.isArray(batchAndamentoDto.ids):',
-      Array.isArray(batchAndamentoDto.ids),
-    );
-
-    // Desestruturação explícita para garantir acesso correto aos dados
     const ids = batchAndamentoDto.ids;
     const operacao = batchAndamentoDto.operacao;
-    // Aceita tanto "novaDataLimite" quanto "prazo" para compatibilidade com o frontend
     const novaDataLimite =
       batchAndamentoDto.novaDataLimite || batchAndamentoDto.prazo;
 
     const erros: string[] = [];
     let processados = 0;
 
-    // 1. Validação: ids deve ser um array não vazio
+    // Validação: ids deve ser um array não vazio
     if (!ids || !Array.isArray(ids)) {
-      const erro = `Campo 'ids' deve ser um array. Recebido tipo: ${typeof ids}, valor: ${JSON.stringify(ids)}`;
-      console.error('[LOTE] Erro de validação:', erro);
-      throw new BadRequestException(erro);
+      throw new BadRequestException(
+        `Campo 'ids' deve ser um array. Recebido tipo: ${typeof ids}`,
+      );
     }
 
     if (ids.length === 0) {
@@ -615,11 +601,7 @@ export class AndamentosService {
       );
     }
 
-    console.log('[LOTE] IDs para processar:', ids);
-    console.log('[LOTE] Operação:', operacao);
-    console.log('[LOTE] Nova data limite (prazo):', novaDataLimite);
-
-    // 2. Validação: operação deve ser válida
+    // Validação: operação deve ser válida
     if (!['excluir', 'prorrogar', 'concluir'].includes(operacao)) {
       throw new BadRequestException(
         `Operação inválida: ${operacao}. Use: excluir, prorrogar ou concluir.`,
@@ -637,10 +619,8 @@ export class AndamentosService {
     const uuidRegex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-    // 4. Processa cada ID individualmente (✅ CORRETO: iterando sobre o array ids)
+    // Processa cada ID individualmente
     for (const id of ids) {
-      console.log(`[LOTE] Processando ID: ${id}`);
-
       // Valida se o ID tem formato de UUID válido
       if (!id || typeof id !== 'string') {
         erros.push(`ID inválido (não é string): ${JSON.stringify(id)}`);
@@ -656,15 +636,12 @@ export class AndamentosService {
         switch (operacao) {
           case 'excluir':
             await this.remover(id, usuario_id);
-            console.log(`[LOTE] ✓ ID ${id} excluído com sucesso`);
             break;
           case 'prorrogar':
             await this.prorrogar(id, novaDataLimite!, usuario_id);
-            console.log(`[LOTE] ✓ ID ${id} prorrogado com sucesso`);
             break;
           case 'concluir':
             await this.concluir(id, usuario_id);
-            console.log(`[LOTE] ✓ ID ${id} concluído com sucesso`);
             break;
           default:
             erros.push(`Operação inválida para ID ${id}: ${operacao}`);
@@ -672,14 +649,12 @@ export class AndamentosService {
         }
         processados++;
       } catch (error) {
-        const mensagemErro = `Erro ao processar ID ${id} na operação ${operacao}: ${error.message}`;
-        console.error(`[LOTE] ✗ ${mensagemErro}`);
-        erros.push(mensagemErro);
+        erros.push(
+          `Erro ao processar ID ${id} na operação ${operacao}: ${error.message}`,
+        );
       }
     }
 
-    const resultado = { processados, erros };
-    console.log('[LOTE] Resultado final:', resultado);
-    return resultado;
+    return { processados, erros };
   }
 }
