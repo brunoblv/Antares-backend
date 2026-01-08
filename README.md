@@ -121,8 +121,6 @@ LDAP_SERVER=ldap://servidor
 LDAP_DOMAIN=@dominio
 ```
 
-📖 Ver [CONFIGURACAO_LDAP.md](CONFIGURACAO_LDAP.md) para detalhes.
-
 ## 🗄️ Estrutura do Projeto
 
 ```
@@ -196,5 +194,4 @@ Propriedade da Prefeitura Municipal de São Paulo - SMUL/ATIC
 
 ---
 
-**Desenvolvido por**: SMUL/ATIC  
-**Contato**: [atic@prefeitura.sp.gov.br](mailto:atic@prefeitura.sp.gov.br)
+**Desenvolvido por**: SMUL/ATIC
