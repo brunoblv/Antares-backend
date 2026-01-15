@@ -163,23 +163,15 @@ export class ProcessosService {
     return processo;
   }
 
-  /**
-   * Busca todos os processos com paginação
-   *
-   * @param pagina - Número da página (padrão: 1)
-   * @param limite - Itens por página (padrão: 10)
-   * @param busca - Termo de busca (opcional)
-   * @param vencendoHoje - Filtrar processos vencendo hoje
-   * @param atrasados - Filtrar processos atrasados
-   * @param usuario_id - ID do usuário que está buscando (para filtrar por unidade)
-   * @returns Lista paginada de processos
-   */
   async buscarTudo(
     pagina: number = 1,
     limite: number = 10,
     busca?: string,
+    interessado?: string,
+    unidadeRemetente?: string,
     vencendoHoje: boolean = false,
     atrasados: boolean = false,
+    concluidos: boolean = false,
     usuario_id?: string,
   ): Promise<ProcessoPaginadoResponseDto> {
     // Valida e ajusta página e limite usando o AppService
@@ -207,7 +199,7 @@ export class ProcessosService {
     const fimDoDia = new Date(hoje);
     fimDoDia.setHours(23, 59, 59, 999);
 
-    // Monta os filtros de busca com OR entre vencendoHoje e atrasados
+    // Monta os filtros de busca
     const searchParams: any = {
       ativo: true, // Apenas processos ativos
       // Filtra por unidade do usuário (exceto para DEV e ADM que podem ver todos)
@@ -216,24 +208,79 @@ export class ProcessosService {
         !['DEV', 'ADM'].includes(permissao) && {
           unidade_id: unidade_id,
         }),
-      ...(busca && {
-        OR: [
-          { numero_sei: { contains: busca } },
-          { assunto: { contains: busca } },
-        ],
-      }),
     };
 
-    // Se pelo menos um filtro de prazo estiver ativo
-    if (vencendoHoje || atrasados) {
-      const filtrosPrazo: any[] = [];
-
-      if (vencendoHoje) {
-        filtrosPrazo.push({
+    // === ISSUE #17: BUSCA GERAL ===
+    // Busca em todos os campos do processo e andamentos
+    if (busca) {
+      searchParams.OR = [
+        { numero_sei: { contains: busca } },
+        { assunto: { contains: busca } },
+        { origem: { contains: busca } },
+        { resposta_final: { contains: busca } },
+        { unidade_respondida_id: { contains: busca } },
+        // Busca nos campos do interessado
+        {
+          interessado: {
+            valor: { contains: busca },
+          },
+        },
+        // Busca nos campos da unidade remetente
+        {
+          unidadeRemetente: {
+            OR: [{ nome: { contains: busca } }, { sigla: { contains: busca } }],
+          },
+        },
+        // Busca nos campos dos andamentos
+        {
           andamentos: {
             some: {
-              ativo: true, // Apenas andamentos ativos
-              status: $Enums.StatusAndamento.EM_ANDAMENTO, // Apenas andamentos em andamento
+              ativo: true,
+              OR: [
+                { origem: { contains: busca } },
+                { destino: { contains: busca } },
+                { observacao: { contains: busca } },
+              ],
+            },
+          },
+        },
+      ];
+    }
+
+    // Filtro específico por interessado
+    if (interessado) {
+      searchParams.interessado = {
+        valor: { contains: interessado },
+      };
+    }
+
+    // Filtro específico por unidade remetente
+    if (unidadeRemetente) {
+      searchParams.unidadeRemetente = {
+        OR: [
+          { nome: { contains: unidadeRemetente } },
+          { sigla: { contains: unidadeRemetente } },
+        ],
+      };
+    }
+
+    // === ISSUE #24: FILTROS RÁPIDOS ===
+    // Se pelo menos um filtro de prazo/status estiver ativo
+    if (vencendoHoje || atrasados || concluidos) {
+      const filtrosStatus: any[] = [];
+
+      // Filtro: Vencendo Hoje
+      if (vencendoHoje) {
+        filtrosStatus.push({
+          andamentos: {
+            some: {
+              ativo: true,
+              status: {
+                in: [
+                  $Enums.StatusAndamento.EM_ANDAMENTO,
+                  $Enums.StatusAndamento.PRORROGADO,
+                ],
+              },
               OR: [
                 // Prazo original vencendo hoje (sem prorrogação)
                 {
@@ -256,12 +303,18 @@ export class ProcessosService {
         });
       }
 
+      // Filtro: Atrasados
       if (atrasados) {
-        filtrosPrazo.push({
+        filtrosStatus.push({
           andamentos: {
             some: {
-              ativo: true, // Apenas andamentos ativos
-              status: $Enums.StatusAndamento.EM_ANDAMENTO, // Apenas andamentos em andamento
+              ativo: true,
+              status: {
+                in: [
+                  $Enums.StatusAndamento.EM_ANDAMENTO,
+                  $Enums.StatusAndamento.PRORROGADO,
+                ],
+              },
               OR: [
                 // Prazo original já venceu (sem prorrogação)
                 {
@@ -282,14 +335,39 @@ export class ProcessosService {
         });
       }
 
-      // Se houver filtros de prazo, adiciona como OR
-      if (filtrosPrazo.length > 0) {
-        // Se já existe um OR (do busca), combina com os filtros de prazo
+      // Filtro: Concluídos
+      if (concluidos) {
+        filtrosStatus.push({
+          AND: [
+            {
+              andamentos: {
+                some: {
+                  ativo: true,
+                  status: $Enums.StatusAndamento.CONCLUIDO,
+                },
+              },
+            },
+            {
+              andamentos: {
+                none: {
+                  ativo: true,
+                  status: { not: $Enums.StatusAndamento.CONCLUIDO },
+                },
+              },
+            },
+          ],
+        });
+      }
+
+      // Adiciona os filtros de status
+      if (filtrosStatus.length > 0) {
+        // Se já existe um OR (da busca geral), combina com AND
         if (searchParams.OR) {
-          searchParams.AND = [{ OR: searchParams.OR }, { OR: filtrosPrazo }];
+          searchParams.AND = [{ OR: searchParams.OR }, { OR: filtrosStatus }];
           delete searchParams.OR;
         } else {
-          searchParams.OR = filtrosPrazo;
+          // Se não tem busca geral, usa OR direto para os filtros
+          searchParams.OR = filtrosStatus;
         }
       }
     }
@@ -313,6 +391,8 @@ export class ProcessosService {
       skip: (pagina - 1) * limite, // Pula os registros das páginas anteriores
       take: limite, // Limita a quantidade de resultados
       include: {
+        interessado: true, // Inclui dados do interessado
+        unidadeRemetente: true, // Inclui dados da unidade remetente
         andamentos: {
           where: { ativo: true }, // Apenas andamentos ativos
           orderBy: { criadoEm: 'desc' }, // Andamentos mais recentes primeiro
