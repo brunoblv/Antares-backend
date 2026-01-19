@@ -12,6 +12,7 @@ import { ProcessosService } from './processos.service';
 import { CreateProcessoDto } from './dto/create-processo.dto';
 import { UpdateProcessoDto } from './dto/update-processo.dto';
 import { CreateRespostaFinalDto } from './dto/create-resposta-final.dto';
+import { BuscarProcessoDto } from './dto/buscar-processo.dto';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -86,32 +87,44 @@ export class ProcessosController {
    * Query params:
    * - pagina: número da página (padrão: 1)
    * - limite: itens por página (padrão: 10)
-   * - busca: termo de busca (opcional)
+   * - busca: termo de busca geral (pesquisa em todos os campos)
+   * - interessado: busca específica no campo interessado
+   * - unidadeRemetente: busca específica na unidade remetente
+   * - vencendoHoje: filtro de processos vencendo hoje (true/false)
+   * - atrasados: filtro de processos atrasados (true/false)
+   * - concluidos: filtro de processos concluídos (true/false)
    *
    * @returns Lista paginada de processos
    */
   @Permissoes('ADM', 'TEC', 'USR') // Todos os usuários autenticados podem listar
   @Get()
-  @ApiOperation({ summary: 'Lista todos os processos com paginação' })
+  @ApiOperation({
+    summary: 'Lista todos os processos com paginação e filtros',
+    description: `
+      Lista processos com suporte a:
+      - Busca geral: pesquisa em todos os campos do processo e andamentos
+      - Buscas específicas: interessado e unidade remetente
+      - Filtros rápidos: vencendo hoje, atrasados e concluídos (podem ser combinados)
+    `,
+  })
   @ApiResponse({
     status: 200,
     description: 'Lista de processos',
     type: ProcessoPaginadoResponseDto,
   })
   buscarTudo(
-    @Query('pagina') pagina?: string,
-    @Query('limite') limite?: string,
-    @Query('busca') busca?: string,
-    @Query('vencendoHoje') vencendoHoje?: string,
-    @Query('atrasados') atrasados?: string,
+    @Query() filtros: BuscarProcessoDto,
     @UsuarioAtual() usuario?: Usuario,
   ): Promise<ProcessoPaginadoResponseDto> {
     return this.processosService.buscarTudo(
-      +pagina,
-      +limite,
-      busca,
-      vencendoHoje === 'true',
-      atrasados === 'true',
+      filtros.pagina,
+      filtros.limite,
+      filtros.busca,
+      filtros.interessado,
+      filtros.unidadeRemetente,
+      filtros.vencendoHoje,
+      filtros.atrasados,
+      filtros.concluidos,
       usuario?.id,
     );
   }
