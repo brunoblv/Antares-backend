@@ -86,4 +86,29 @@ export class CreateProcessoDto {
     { message: 'Prazo deve ser uma data válida no formato ISO 8601.' },
   )
   prazo?: string;
+
+  @ApiProperty({
+    description: 'Resposta final dada ao processo',
+    example: 'Deferido. Processo aprovado conforme solicitado.',
+    required: false,
+  })
+  @IsOptional()
+  @IsString({ message: 'Resposta final deve ser texto.' })
+  resposta_final?: string;
+
+  @ApiProperty({
+    description:
+      'Data em que o gabinete respondeu o processo ao solicitante (ISO 8601)',
+    example: '2025-11-28T00:00:00.000Z',
+    required: false,
+  })
+  @IsOptional()
+  @IsDateString(
+    {},
+    {
+      message:
+        'Data de resposta final deve ser uma data válida no formato ISO 8601.',
+    },
+  )
+  data_resposta_final?: string;
 }

@@ -602,6 +602,10 @@ export class ProcessosService {
       prazo: updateProcessoDto.prazo
         ? new Date(updateProcessoDto.prazo)
         : undefined,
+      resposta_final: updateProcessoDto.resposta_final,
+      data_resposta_final: updateProcessoDto.data_resposta_final
+        ? new Date(updateProcessoDto.data_resposta_final)
+        : undefined,
     };
 
     // Só adiciona os campos de relacionamento se eles tiverem valores
