@@ -146,7 +146,7 @@ model andamento {
 model Log {
   id           String   @id @default(uuid()) // ID único do log (UUID gerado automaticamente) - Chave primária
   tipoAcao     TipoAcao // Tipo de ação realizada - Enum (TipoAcao) - Obrigatório - Define qual tipo de operação foi realizada
-  descricao    String   // Descrição detalhada da ação realizada - String (TEXT no banco) - Obrigatório - Descrição completa do que foi feito, incluindo dados relevantes
+  descricao    String   @db.LongText // Descrição detalhada da ação realizada - String (LONGTEXT no banco) - Obrigatório - Descrição completa do que foi feito, incluindo dados relevantes
   entidadeTipo String // Tipo da entidade afetada (processo, andamento, etc.) - String - Obrigatório - Identifica qual tipo de entidade foi afetada pela ação - Exemplo: "processo", "andamento"
   entidadeId   String // ID da entidade afetada - String (UUID) - Obrigatório - ID da entidade que foi criada, atualizada ou removida
   dadosAntigos String? @db.LongText // Dados anteriores (em JSON) antes da alteração - String (LONGTEXT no banco) - Opcional - Armazena o estado anterior da entidade em formato JSON para comparação
