@@ -11,6 +11,7 @@ model OrigemProcesso {
 model Interessado {
   id     String  @id @default(uuid()) // ID único
   valor  String  @unique // Nome do interessado digitado (texto livre, único)
+  ativo  Boolean @default(true) // Indica se o interessado está ativo (true) ou foi excluído logicamente (false) - Boolean - Valor padrão: true
   criadoEm DateTime @default(now()) // Data/hora de criação
 
   processos processo[] // Lista de processos relacionados a este interessado
@@ -105,6 +106,7 @@ model processo {
   unidadeRemetente        Unidade?    @relation("UnidadeRemetente", fields: [unidade_remetente_id], references: [id]) // Relacionamento com o modelo Unidade - Unidade remetente do processo
   prazo                   DateTime? // Prazo limite para conclusão do processo - DateTime (opcional) - Exemplo: "2025-12-31T00:00:00.000Z"
   data_recebimento        DateTime    @default(now()) // Data em que o gabinete recebeu o processo - DateTime - Valor padrão: Data/hora atual - Pode ser data atual ou anterior
+  data_envio_unidade      DateTime? // Data em que o processo foi enviado para a unidade - DateTime (opcional) - Data de envio do processo para a unidade responsável
   data_resposta_final     DateTime? // Data em que o gabinete respondeu o processo ao solicitante - DateTime (opcional) - Data de fechamento/conclusão do processo
   resposta_final          String? // Resposta final dada ao processo - String (opcional) - Texto com a resposta/despacho final do processo
   unidade_respondida_id   String? // ID/Sigla da unidade que foi respondida - String (opcional) - Identifica qual unidade recebeu a resposta final

@@ -99,7 +99,7 @@ export class ProcessosService {
     // Verifica se o interessado_id existe (se fornecido)
     if (createProcessoDto.interessado_id) {
       const interessado = await this.prisma.interessado.findUnique({
-        where: { id: createProcessoDto.interessado_id },
+        where: { id: createProcessoDto.interessado_id, ativo: true },
       });
       if (!interessado) {
         throw new BadRequestException('Interessado não encontrado.');
@@ -135,6 +135,9 @@ export class ProcessosService {
         unidade_remetente_id: createProcessoDto.unidade_remetente_id || null,
         data_recebimento: createProcessoDto.data_recebimento
           ? new Date(createProcessoDto.data_recebimento)
+          : undefined,
+        data_envio_unidade: createProcessoDto.data_envio_unidade
+          ? new Date(createProcessoDto.data_envio_unidade)
           : undefined,
         prazo: createProcessoDto.prazo
           ? new Date(createProcessoDto.prazo)
@@ -603,7 +606,7 @@ export class ProcessosService {
     // Se recebeu interessado_id diretamente, valida se existe
     if (updateProcessoDto.interessado_id) {
       const interessadoExistente = await this.prisma.interessado.findUnique({
-        where: { id: updateProcessoDto.interessado_id },
+        where: { id: updateProcessoDto.interessado_id, ativo: true },
       });
       if (!interessadoExistente) {
         throw new BadRequestException('Interessado não encontrado.');
@@ -620,7 +623,7 @@ export class ProcessosService {
       try {
         // Primeiro tenta encontrar
         let interessado = await this.prisma.interessado.findFirst({
-          where: { valor: updateProcessoDto.interessado.trim() },
+          where: { valor: updateProcessoDto.interessado.trim(), ativo: true },
         });
 
         // Se não encontrou, cria
@@ -678,6 +681,9 @@ export class ProcessosService {
       origem: updateProcessoDto.origem,
       data_recebimento: updateProcessoDto.data_recebimento
         ? new Date(updateProcessoDto.data_recebimento)
+        : undefined,
+      data_envio_unidade: updateProcessoDto.data_envio_unidade
+        ? new Date(updateProcessoDto.data_envio_unidade)
         : undefined,
       prazo: updateProcessoDto.prazo
         ? new Date(updateProcessoDto.prazo)

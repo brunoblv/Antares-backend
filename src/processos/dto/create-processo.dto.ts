@@ -76,6 +76,21 @@ export class CreateProcessoDto {
   data_recebimento?: string;
 
   @ApiProperty({
+    description: 'Data em que o processo foi enviado para a unidade (ISO 8601)',
+    example: '2025-11-28T00:00:00.000Z',
+    required: false,
+  })
+  @IsOptional()
+  @IsDateString(
+    {},
+    {
+      message:
+        'Data de envio para unidade deve ser uma data válida no formato ISO 8601.',
+    },
+  )
+  data_envio_unidade?: string;
+
+  @ApiProperty({
     description: 'Prazo limite para conclusão do processo (ISO 8601)',
     example: '2025-12-31T00:00:00.000Z',
     required: false,

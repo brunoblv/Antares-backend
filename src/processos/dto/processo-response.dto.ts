@@ -38,6 +38,14 @@ export class ProcessoResponseDto implements processo {
   data_recebimento: Date;
 
   @ApiProperty({
+    description: 'Data em que o processo foi enviado para a unidade',
+    required: false,
+    type: Date,
+    nullable: true,
+  })
+  data_envio_unidade: Date | null;
+
+  @ApiProperty({
     description: 'Prazo limite para conclusão do processo',
     required: false,
     type: Date,

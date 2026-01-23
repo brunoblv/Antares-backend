@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Query,
+  Put,
 } from '@nestjs/common';
 import { InteressadosService } from './interessados.service';
 import { InteressadoResponseDto } from './dto/interessado-response.dto';
@@ -125,6 +126,30 @@ export class InteressadosController {
     description: 'Dados inválidos ou nome já existe',
   })
   atualizar(
+    @Param('id') id: string,
+    @Body() updateInteressadoDto: UpdateInteressadoDto,
+  ): Promise<InteressadoResponseDto> {
+    return this.interessadosService.atualizar(id, updateInteressadoDto);
+  }
+
+  /**
+   * PUT /interessados/:id
+   * Atualiza um interessado (substituição completa)
+   */
+  @Permissoes('ADM', 'TEC')
+  @Put(':id')
+  @ApiOperation({ summary: 'Atualiza um interessado (substituição completa)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Interessado atualizado com sucesso',
+    type: InteressadoResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Interessado não encontrado' })
+  @ApiResponse({
+    status: 400,
+    description: 'Dados inválidos ou nome já existe',
+  })
+  atualizarPut(
     @Param('id') id: string,
     @Body() updateInteressadoDto: UpdateInteressadoDto,
   ): Promise<InteressadoResponseDto> {

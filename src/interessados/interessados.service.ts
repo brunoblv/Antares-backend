@@ -17,6 +17,7 @@ export class InteressadosService {
    */
   async listaCompleta(): Promise<InteressadoResponseDto[]> {
     const interessados = await this.prisma.interessado.findMany({
+      where: { ativo: true },
       orderBy: { valor: 'asc' },
     });
 
@@ -36,6 +37,7 @@ export class InteressadosService {
         valor: {
           contains: termo,
         },
+        ativo: true,
       },
       orderBy: { valor: 'asc' },
       take: 10, // Limita a 10 resultados para performance
@@ -54,9 +56,9 @@ export class InteressadosService {
   async criar(
     createInteressadoDto: CreateInteressadoDto,
   ): Promise<InteressadoResponseDto> {
-    // Verifica se já existe um interessado com o mesmo nome
+    // Verifica se já existe um interessado ativo com o mesmo nome
     const interessadoExistente = await this.prisma.interessado.findFirst({
-      where: { valor: createInteressadoDto.valor.trim() },
+      where: { valor: createInteressadoDto.valor.trim(), ativo: true },
     });
 
     if (interessadoExistente) {
@@ -82,7 +84,7 @@ export class InteressadosService {
    */
   async buscarPorId(id: string): Promise<InteressadoResponseDto> {
     const interessado = await this.prisma.interessado.findUnique({
-      where: { id },
+      where: { id, ativo: true },
     });
 
     if (!interessado) {
@@ -103,21 +105,22 @@ export class InteressadosService {
     id: string,
     updateInteressadoDto: UpdateInteressadoDto,
   ): Promise<InteressadoResponseDto> {
-    // Verifica se o interessado existe
+    // Verifica se o interessado existe e está ativo
     const interessadoExistente = await this.prisma.interessado.findUnique({
-      where: { id },
+      where: { id, ativo: true },
     });
 
     if (!interessadoExistente) {
       throw new NotFoundException('Interessado não encontrado.');
     }
 
-    // Se está atualizando o valor, verifica se não existe outro com o mesmo nome
+    // Se está atualizando o valor, verifica se não existe outro ativo com o mesmo nome
     if (updateInteressadoDto.valor) {
       const interessadoComMesmoNome = await this.prisma.interessado.findFirst({
         where: {
           valor: updateInteressadoDto.valor.trim(),
           id: { not: id },
+          ativo: true,
         },
       });
 
@@ -144,32 +147,33 @@ export class InteressadosService {
   }
 
   /**
-   * Remove um interessado
+   * Remove um interessado (soft delete - marca como inativo)
    */
   async remover(id: string): Promise<{ removido: boolean }> {
-    // Verifica se o interessado existe
+    // Verifica se o interessado existe e está ativo
     const interessado = await this.prisma.interessado.findUnique({
-      where: { id },
+      where: { id, ativo: true },
     });
 
     if (!interessado) {
       throw new NotFoundException('Interessado não encontrado.');
     }
 
-    // Verifica se há processos vinculados
+    // Verifica se há processos ativos vinculados
     const processosVinculados = await this.prisma.processo.count({
-      where: { interessado_id: id },
+      where: { interessado_id: id, ativo: true },
     });
 
     if (processosVinculados > 0) {
       throw new BadRequestException(
-        `Não é possível remover este interessado pois existem ${processosVinculados} processo(s) vinculado(s).`,
+        `Não é possível remover este interessado pois existem ${processosVinculados} processo(s) ativo(s) vinculado(s).`,
       );
     }
 
-    // Remove o interessado
-    await this.prisma.interessado.delete({
+    // Remove o interessado (soft delete - marca como inativo)
+    await this.prisma.interessado.update({
       where: { id },
+      data: { ativo: false },
     });
 
     return { removido: true };
