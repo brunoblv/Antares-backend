@@ -24,6 +24,7 @@ describe('AuthService Tests', () => {
     permissao: 'USR',
     status: true,
     avatar: 'http://avatar.com/teste',
+    unidade_id: '123e4567-e89b-12d3-a456-426614174001',
     ultimoLogin: new Date('2023-11-14'),
     criadoEm: new Date('2023-11-13'),
     atualizadoEm: new Date('2023-11-14'),
@@ -40,8 +41,10 @@ describe('AuthService Tests', () => {
   };
 
   const mockTokens: UsuarioToken = {
-    access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE2NTQ3MjQ4MDAsInBlcm1pc3NvIjoiVVNSIn0.4tC299X2vFQ2uodzNVv9RJm0u8Y4XkX9X5J9w7zD6E4',
-    refresh_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJhY2ViZDgxMi0wOTg3LTQ1NmYtYTQwZS02MjVmODk0NzY1NDIiLCJlbWFpbCI6InVzdWFyaW9AdGVzdGUuY29tIiwiZXhwIjoxNzA2NDgwMDAwLCJyb2xlcyI6WyJVU1VBUklPIiwiQURNSU4iXX0.1Qa-3x4L5D6vV8w9x0y1z2A3B4C5D6E7F8G9H0I1J2K3L4M5N6O7P8Q9R0S',
+    access_token:
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE2NTQ3MjQ4MDAsInBlcm1pc3NvIjoiVVNSIn0.4tC299X2vFQ2uodzNVv9RJm0u8Y4XkX9X5J9w7zD6E4',
+    refresh_token:
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJhY2ViZDgxMi0wOTg3LTQ1NmYtYTQwZS02MjVmODk0NzY1NDIiLCJlbWFpbCI6InVzdWFyaW9AdGVzdGUuY29tIiwiZXhwIjoxNzA2NDgwMDAwLCJyb2xlcyI6WyJVU1VBUklPIiwiQURNSU4iXX0.1Qa-3x4L5D6vV8w9x0y1z2A3B4C5D6E7F8G9H0I1J2K3L4M5N6O7P8Q9R0S',
   };
 
   beforeEach(async () => {
@@ -82,8 +85,12 @@ describe('AuthService Tests', () => {
           useValue: {
             signAsync: jest
               .fn()
-              .mockResolvedValueOnce('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE2NTQ3MjQ4MDAsInBlcm1pc3NvIjoiVVNSIn0.4tC299X2vFQ2uodzNVv9RJm0u8Y4XkX9X5J9w7zD6E4')
-              .mockResolvedValueOnce('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJhY2ViZDgxMi0wOTg3LTQ1NmYtYTQwZS02MjVmODk0NzY1NDIiLCJlbWFpbCI6InVzdWFyaW9AdGVzdGUuY29tIiwiZXhwIjoxNzA2NDgwMDAwLCJyb2xlcyI6WyJVU1VBUklPIiwiQURNSU4iXX0.1Qa-3x4L5D6vV8w9x0y1z2A3B4C5D6E7F8G9H0I1J2K3L4M5N6O7P8Q9R0S'),
+              .mockResolvedValueOnce(
+                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE2NTQ3MjQ4MDAsInBlcm1pc3NvIjoiVVNSIn0.4tC299X2vFQ2uodzNVv9RJm0u8Y4XkX9X5J9w7zD6E4',
+              )
+              .mockResolvedValueOnce(
+                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJhY2ViZDgxMi0wOTg3LTQ1NmYtYTQwZS02MjVmODk0NzY1NDIiLCJlbWFpbCI6InVzdWFyaW9AdGVzdGUuY29tIiwiZXhwIjoxNzA2NDgwMDAwLCJyb2xlcyI6WyJVU1VBUklPIiwiQURNSU4iXX0.1Qa-3x4L5D6vV8w9x0y1z2A3B4C5D6E7F8G9H0I1J2K3L4M5N6O7P8Q9R0S',
+              ),
           },
         },
       ],
@@ -132,8 +139,12 @@ describe('AuthService Tests', () => {
 
     const signAsyncSpy = jest
       .spyOn(jwtService, 'signAsync')
-      .mockResolvedValueOnce('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE2NTQ3MjQ4MDAsInBlcm1pc3NvIjoiVVNSIn0.4tC299X2vFQ2uodzNVv9RJm0u8Y4XkX9X5J9w7zD6E4')
-      .mockResolvedValueOnce('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJhY2ViZDgxMi0wOTg3LTQ1NmYtYTQwZS02MjVmODk0NzY1NDIiLCJlbWFpbCI6InVzdWFyaW9AdGVzdGUuY29tIiwiZXhwIjoxNzA2NDgwMDAwLCJyb2xlcyI6WyJVU1VBUklPIiwiQURNSU4iXX0.1Qa-3x4L5D6vV8w9x0y1z2A3B4C5D6E7F8G9H0I1J2K3L4M5N6O7P8Q9R0S');
+      .mockResolvedValueOnce(
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE2NTQ3MjQ4MDAsInBlcm1pc3NvIjoiVVNSIn0.4tC299X2vFQ2uodzNVv9RJm0u8Y4XkX9X5J9w7zD6E4',
+      )
+      .mockResolvedValueOnce(
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJhY2ViZDgxMi0wOTg3LTQ1NmYtYTQwZS02MjVmODk0NzY1NDIiLCJlbWFpbCI6InVzdWFyaW9AdGVzdGUuY29tIiwiZXhwIjoxNzA2NDgwMDAwLCJyb2xlcyI6WyJVU1VBUklPIiwiQURNSU4iXX0.1Qa-3x4L5D6vV8w9x0y1z2A3B4C5D6E7F8G9H0I1J2K3L4M5N6O7P8Q9R0S',
+      );
 
     const result = await service.getTokens(mockUsuarioJwt);
 

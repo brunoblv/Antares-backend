@@ -11,9 +11,17 @@ import {
 import { UnidadesService } from './unidades.service';
 import { CreateUnidadeDto } from './dto/create-unidade.dto';
 import { UpdateUnidadeDto } from './dto/update-unidade.dto';
-import { UnidadeResponseDto, UnidadePaginadoResponseDto } from './dto/unidade-response.dto';
+import {
+  UnidadeResponseDto,
+  UnidadePaginadoResponseDto,
+} from './dto/unidade-response.dto';
 import { Permissoes } from 'src/auth/decorators/permissoes.decorator';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 
 @ApiTags('Unidades')
 @ApiBearerAuth()
@@ -28,8 +36,14 @@ export class UnidadesController {
   @Permissoes('ADM')
   @Post()
   @ApiOperation({ summary: 'Cria uma nova unidade' })
-  @ApiResponse({ status: 201, description: 'Unidade criada com sucesso', type: UnidadeResponseDto })
-  criar(@Body() createUnidadeDto: CreateUnidadeDto): Promise<UnidadeResponseDto> {
+  @ApiResponse({
+    status: 201,
+    description: 'Unidade criada com sucesso',
+    type: UnidadeResponseDto,
+  })
+  criar(
+    @Body() createUnidadeDto: CreateUnidadeDto,
+  ): Promise<UnidadeResponseDto> {
     return this.unidadesService.criar(createUnidadeDto);
   }
 
@@ -40,7 +54,11 @@ export class UnidadesController {
   @Permissoes('ADM', 'TEC', 'USR')
   @Get()
   @ApiOperation({ summary: 'Lista todas as unidades com paginação' })
-  @ApiResponse({ status: 200, description: 'Lista de unidades', type: UnidadePaginadoResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de unidades',
+    type: UnidadePaginadoResponseDto,
+  })
   buscarTudo(
     @Query('pagina') pagina?: string,
     @Query('limite') limite?: string,
@@ -51,14 +69,23 @@ export class UnidadesController {
 
   /**
    * GET /unidades/lista-completa
-   * Lista todas as unidades (sem paginação)
+   * Lista todas as unidades (sem paginação) - inclui inativas por padrão
    */
   @Permissoes('ADM', 'TEC', 'USR')
   @Get('lista-completa')
-  @ApiOperation({ summary: 'Lista todas as unidades (sem paginação)' })
-  @ApiResponse({ status: 200, description: 'Lista completa de unidades', type: [UnidadeResponseDto] })
-  listaCompleta(): Promise<UnidadeResponseDto[]> {
-    return this.unidadesService.listaCompleta();
+  @ApiOperation({
+    summary: 'Lista todas as unidades (sem paginação) - inclui inativas',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista completa de unidades',
+    type: [UnidadeResponseDto],
+  })
+  listaCompleta(
+    @Query('includeInactive') includeInactive?: string,
+  ): Promise<UnidadeResponseDto[]> {
+    const includeInactiveFlag = includeInactive === 'false' ? false : true;
+    return this.unidadesService.listaCompleta(includeInactiveFlag);
   }
 
   /**
@@ -68,7 +95,11 @@ export class UnidadesController {
   @Permissoes('ADM', 'TEC', 'USR')
   @Get(':id')
   @ApiOperation({ summary: 'Busca uma unidade por ID' })
-  @ApiResponse({ status: 200, description: 'Unidade encontrada', type: UnidadeResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Unidade encontrada',
+    type: UnidadeResponseDto,
+  })
   buscarPorId(@Param('id') id: string): Promise<UnidadeResponseDto> {
     return this.unidadesService.buscarPorId(id);
   }
@@ -80,12 +111,34 @@ export class UnidadesController {
   @Permissoes('ADM')
   @Patch(':id')
   @ApiOperation({ summary: 'Atualiza uma unidade' })
-  @ApiResponse({ status: 200, description: 'Unidade atualizada com sucesso', type: UnidadeResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Unidade atualizada com sucesso',
+    type: UnidadeResponseDto,
+  })
   atualizar(
     @Param('id') id: string,
     @Body() updateUnidadeDto: UpdateUnidadeDto,
   ): Promise<UnidadeResponseDto> {
     return this.unidadesService.atualizar(id, updateUnidadeDto);
+  }
+
+  /**
+   * PATCH /unidades/:id/reativar
+   * Reativa uma unidade que foi soft deleted
+   */
+  @Permissoes('ADM')
+  @Patch(':id/reativar')
+  @ApiOperation({ summary: 'Reativa uma unidade inativa' })
+  @ApiResponse({
+    status: 200,
+    description: 'Unidade reativada com sucesso',
+    type: UnidadeResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Unidade não encontrada' })
+  @ApiResponse({ status: 400, description: 'Unidade já está ativa' })
+  reativar(@Param('id') id: string): Promise<UnidadeResponseDto> {
+    return this.unidadesService.reativar(id);
   }
 
   /**
@@ -100,6 +153,3 @@ export class UnidadesController {
     return this.unidadesService.remover(id);
   }
 }
-
-
-

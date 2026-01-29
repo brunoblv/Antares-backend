@@ -14,9 +14,21 @@ import {
   ProcessoResponseDto,
   ProcessoPaginadoResponseDto,
 } from './dto/processo-response.dto';
-import { processo, $Enums } from '@prisma/client';
+import { processo, andamento, $Enums } from '@prisma/client';
 import { AppService } from 'src/app.service';
 import { LogsService } from 'src/logs/logs.service';
+
+/**
+ * Helper function to map Prisma processo to ProcessoResponseDto
+ */
+function mapProcessoToResponseDto(
+  processo: processo & { andamentos?: andamento[] },
+): ProcessoResponseDto {
+  return {
+    ...processo,
+    data_prorrogacao: processo.prorrogacao,
+  };
+}
 
 /**
  * Service - Camada de Lógica de Negócio
@@ -142,6 +154,9 @@ export class ProcessosService {
         prazo: createProcessoDto.prazo
           ? new Date(createProcessoDto.prazo)
           : undefined,
+        prorrogacao: createProcessoDto.data_prorrogacao
+          ? new Date(createProcessoDto.data_prorrogacao)
+          : undefined,
         unidade_id: usuario.unidade_id,
       },
     });
@@ -163,7 +178,7 @@ export class ProcessosService {
       { numero_sei: processo.numero_sei, assunto: processo.assunto },
     );
 
-    return processo;
+    return mapProcessoToResponseDto(processo);
   }
 
   async buscarTudo(
@@ -303,6 +318,15 @@ export class ProcessosService {
               ],
             },
           },
+          // Garante que não há andamentos mais recentes concluídos
+          AND: {
+            andamentos: {
+              none: {
+                ativo: true,
+                status: $Enums.StatusAndamento.CONCLUIDO,
+              },
+            },
+          },
         });
       }
 
@@ -333,6 +357,15 @@ export class ProcessosService {
                   },
                 },
               ],
+            },
+          },
+          // Garante que não há andamentos mais recentes concluídos
+          AND: {
+            andamentos: {
+              none: {
+                ativo: true,
+                status: $Enums.StatusAndamento.CONCLUIDO,
+              },
             },
           },
         });
@@ -427,7 +460,7 @@ export class ProcessosService {
       total: +total,
       pagina: +pagina,
       limite: +limite,
-      data: processos,
+      data: processos.map(mapProcessoToResponseDto),
     };
   }
 
@@ -496,7 +529,7 @@ export class ProcessosService {
       }
     }
 
-    return processo;
+    return mapProcessoToResponseDto(processo);
   }
 
   /**
@@ -564,7 +597,7 @@ export class ProcessosService {
       }
     }
 
-    return processo;
+    return mapProcessoToResponseDto(processo);
   }
 
   /**
@@ -688,6 +721,9 @@ export class ProcessosService {
       prazo: updateProcessoDto.prazo
         ? new Date(updateProcessoDto.prazo)
         : undefined,
+      prorrogacao: updateProcessoDto.data_prorrogacao
+        ? new Date(updateProcessoDto.data_prorrogacao)
+        : undefined,
       resposta_final: updateProcessoDto.resposta_final,
       data_resposta_final: updateProcessoDto.data_resposta_final
         ? new Date(updateProcessoDto.data_resposta_final)
@@ -752,7 +788,7 @@ export class ProcessosService {
       },
     );
 
-    return processoAtualizado;
+    return mapProcessoToResponseDto(processoAtualizado);
   }
 
   /**
@@ -858,7 +894,7 @@ export class ProcessosService {
         },
       });
 
-      return processoAtualizado;
+      return mapProcessoToResponseDto(processoAtualizado);
     }
 
     // Se já existe um andamento CONCLUIDO com mesma observação e data_envio, não cria outro
@@ -918,7 +954,7 @@ export class ProcessosService {
         },
       });
 
-      return processoAtualizado;
+      return mapProcessoToResponseDto(processoAtualizado);
     }
 
     // Executa update do processo e criação do andamento em transação
@@ -1000,7 +1036,7 @@ export class ProcessosService {
       },
     );
 
-    return processoAtualizado;
+    return mapProcessoToResponseDto(processoAtualizado);
   }
 
   /**

@@ -103,6 +103,21 @@ export class CreateProcessoDto {
   prazo?: string;
 
   @ApiProperty({
+    description: 'Data de prorrogação do prazo do processo (ISO 8601)',
+    example: '2026-01-15T00:00:00.000Z',
+    required: false,
+  })
+  @IsOptional()
+  @IsDateString(
+    {},
+    {
+      message:
+        'Data de prorrogação deve ser uma data válida no formato ISO 8601.',
+    },
+  )
+  data_prorrogacao?: string;
+
+  @ApiProperty({
     description: 'Resposta final dada ao processo',
     example: 'Deferido. Processo aprovado conforme solicitado.',
     required: false,

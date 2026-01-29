@@ -105,6 +105,7 @@ model processo {
   unidade_remetente_id    String? // ID da unidade remetente (chave estrangeira) - String (UUID) - Opcional - Referência à unidade que está remetendo o processo
   unidadeRemetente        Unidade?    @relation("UnidadeRemetente", fields: [unidade_remetente_id], references: [id]) // Relacionamento com o modelo Unidade - Unidade remetente do processo
   prazo                   DateTime? // Prazo limite para conclusão do processo - DateTime (opcional) - Exemplo: "2025-12-31T00:00:00.000Z"
+  prorrogacao             DateTime? // Nova data limite caso o processo tenha sido prorrogado - DateTime (opcional) - Semelhante ao campo de andamentos
   data_recebimento        DateTime    @default(now()) // Data em que o gabinete recebeu o processo - DateTime - Valor padrão: Data/hora atual - Pode ser data atual ou anterior
   data_envio_unidade      DateTime? // Data em que o processo foi enviado para a unidade - DateTime (opcional) - Data de envio do processo para a unidade responsável
   data_resposta_final     DateTime? // Data em que o gabinete respondeu o processo ao solicitante - DateTime (opcional) - Data de fechamento/conclusão do processo

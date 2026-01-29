@@ -7,7 +7,7 @@ import { processo, andamento } from '@prisma/client';
  * Define como o processo será retornado pela API.
  * Inclui os andamentos relacionados para facilitar consultas.
  */
-export class ProcessoResponseDto implements processo {
+export class ProcessoResponseDto {
   @ApiProperty({ description: 'ID único do processo' })
   id: string;
 
@@ -52,6 +52,14 @@ export class ProcessoResponseDto implements processo {
     nullable: true,
   })
   prazo: Date | null;
+
+  @ApiProperty({
+    description: 'Data de prorrogação do prazo do processo',
+    required: false,
+    type: Date,
+    nullable: true,
+  })
+  data_prorrogacao: Date | null;
 
   @ApiProperty({
     description: 'Data de resposta final ao solicitante',

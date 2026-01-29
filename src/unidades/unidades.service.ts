@@ -129,13 +129,16 @@ export class UnidadesService {
   }
 
   /**
-   * Busca todas as unidades (lista completa)
+   * Busca todas as unidades (lista completa) - incluindo inativas
    *
+   * @param includeInactive - Se true, inclui unidades inativas (soft deleted)
    * @returns Lista completa de unidades
    */
-  async listaCompleta(): Promise<UnidadeResponseDto[]> {
+  async listaCompleta(
+    includeInactive: boolean = true,
+  ): Promise<UnidadeResponseDto[]> {
     const unidades: Unidade[] = await this.prisma.unidade.findMany({
-      where: { ativo: true }, // Apenas unidades ativas
+      where: includeInactive ? {} : { ativo: true }, // Retorna todas se includeInactive=true, senão apenas ativas
       orderBy: { nome: 'asc' },
     });
 
@@ -267,5 +270,35 @@ export class UnidadesService {
     });
 
     return { removido: true };
+  }
+
+  /**
+   * Reativa uma unidade que foi soft deleted
+   *
+   * @param id - ID da unidade a ser reativada
+   * @returns Unidade reativada
+   */
+  async reativar(id: string): Promise<UnidadeResponseDto> {
+    // Verifica se a unidade existe
+    const unidade = await this.prisma.unidade.findUnique({
+      where: { id },
+    });
+
+    if (!unidade) {
+      throw new NotFoundException('Unidade não encontrada.');
+    }
+
+    // Se já está ativa, retorna erro
+    if (unidade.ativo) {
+      throw new BadRequestException('Unidade já está ativa.');
+    }
+
+    // Reativa a unidade
+    const unidadeReativada = await this.prisma.unidade.update({
+      where: { id },
+      data: { ativo: true },
+    });
+
+    return unidadeReativada;
   }
 }
