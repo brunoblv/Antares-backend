@@ -90,6 +90,7 @@ export class ProcessosController {
    * - busca: termo de busca geral (pesquisa em todos os campos)
    * - interessado: busca específica no campo interessado
    * - unidadeRemetente: busca específica na unidade remetente
+   * - unidadeDestino: busca específica na unidade destino
    * - vencendoHoje: filtro de processos vencendo hoje (true/false)
    * - atrasados: filtro de processos atrasados (true/false)
    * - concluidos: filtro de processos concluídos (true/false)
@@ -103,7 +104,7 @@ export class ProcessosController {
     description: `
       Lista processos com suporte a:
       - Busca geral: pesquisa em todos os campos do processo e andamentos
-      - Buscas específicas: interessado e unidade remetente
+      - Buscas específicas: interessado, unidade remetente e unidade destino
       - Filtros rápidos: vencendo hoje, atrasados e concluídos (podem ser combinados)
     `,
   })
@@ -122,6 +123,7 @@ export class ProcessosController {
       filtros.busca,
       filtros.interessado,
       filtros.unidadeRemetente,
+      filtros.unidadeDestino,
       filtros.vencendoHoje,
       filtros.atrasados,
       filtros.concluidos,

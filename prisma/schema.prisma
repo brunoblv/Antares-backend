@@ -66,6 +66,7 @@ model Unidade {
   usuarios  Usuario[] // Lista de usuários pertencentes a esta unidade - Array de Usuario - Usuários vinculados à unidade
   processos processo[] // Lista de processos cadastrados por esta unidade - Array de processo - Processos vinculados à unidade
   processosRemetentes processo[] @relation("UnidadeRemetente") // Lista de processos onde esta unidade é a remetente - Array de processo - Processos remetidos por esta unidade
+  processosDestinatarios processo[] @relation("UnidadeDestino") // Lista de processos onde esta unidade é a destinatária - Array de processo - Processos destinados a esta unidade
 
   @@map("unidades")
 }
@@ -104,6 +105,8 @@ model processo {
   interessado             Interessado? @relation(fields: [interessado_id], references: [id]) // Relacionamento com o modelo Interessado - Interessado do processo
   unidade_remetente_id    String? // ID da unidade remetente (chave estrangeira) - String (UUID) - Opcional - Referência à unidade que está remetendo o processo
   unidadeRemetente        Unidade?    @relation("UnidadeRemetente", fields: [unidade_remetente_id], references: [id]) // Relacionamento com o modelo Unidade - Unidade remetente do processo
+  unidade_destino_id      String? // ID da unidade destinatária (chave estrangeira) - String (UUID) - Opcional - Referência à unidade que é a destinatária do processo
+  unidadeDestino          Unidade?    @relation("UnidadeDestino", fields: [unidade_destino_id], references: [id]) // Relacionamento com o modelo Unidade - Unidade destinatária do processo
   prazo                   DateTime? // Prazo limite para conclusão do processo - DateTime (opcional) - Exemplo: "2025-12-31T00:00:00.000Z"
   prorrogacao             DateTime? // Nova data limite caso o processo tenha sido prorrogado - DateTime (opcional) - Semelhante ao campo de andamentos
   data_recebimento        DateTime    @default(now()) // Data em que o gabinete recebeu o processo - DateTime - Valor padrão: Data/hora atual - Pode ser data atual ou anterior

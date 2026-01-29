@@ -60,6 +60,17 @@ export class CreateProcessoDto {
   unidade_remetente_id?: string;
 
   @ApiProperty({
+    description: 'ID da unidade destinatária do processo',
+    example: 'uuid-da-unidade-destinataria',
+    required: false,
+  })
+  @IsOptional()
+  @IsUUID('4', {
+    message: 'ID da unidade destinatária deve ser um UUID válido.',
+  })
+  unidade_destino_id?: string;
+
+  @ApiProperty({
     description: 'Data em que o gabinete recebeu o processo (ISO 8601)',
     example: '2025-11-28T00:00:00.000Z',
     required: false,

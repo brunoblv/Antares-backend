@@ -11,4 +11,5 @@ export class UpdateProcessoDto extends PartialType(CreateProcessoDto) {
   // Campos adicionais para compatibilidade com nomes alternativos
   interessado?: string; // Nome do interessado (para busca/criação)
   unidade_remetente?: string; // Nome/sigla da unidade remetente
+  unidade_destino?: string; // Nome/sigla da unidade destinatária
 }

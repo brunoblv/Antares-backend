@@ -34,6 +34,13 @@ export class ProcessoResponseDto {
   })
   unidade_remetente_id: string | null;
 
+  @ApiProperty({
+    description: 'ID da unidade destinatária do processo',
+    required: false,
+    nullable: true,
+  })
+  unidade_destino_id: string | null;
+
   @ApiProperty({ description: 'Data em que o gabinete recebeu o processo' })
   data_recebimento: Date;
 

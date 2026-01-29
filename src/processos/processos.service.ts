@@ -128,6 +128,16 @@ export class ProcessosService {
       }
     }
 
+    // Verifica se o unidade_destino_id existe (se fornecido)
+    if (createProcessoDto.unidade_destino_id) {
+      const unidadeDestino = await this.prisma.unidade.findUnique({
+        where: { id: createProcessoDto.unidade_destino_id },
+      });
+      if (!unidadeDestino) {
+        throw new BadRequestException('Unidade destinatária não encontrada.');
+      }
+    }
+
     // Salva a origem digitada em OrigemProcesso se não existir
     if (createProcessoDto.origem && createProcessoDto.origem.trim() !== '') {
       await this.prisma.origemProcesso.upsert({
@@ -145,6 +155,7 @@ export class ProcessosService {
         origem: createProcessoDto.origem || 'EXPEDIENTE',
         interessado_id: createProcessoDto.interessado_id || null,
         unidade_remetente_id: createProcessoDto.unidade_remetente_id || null,
+        unidade_destino_id: createProcessoDto.unidade_destino_id || null,
         data_recebimento: createProcessoDto.data_recebimento
           ? new Date(createProcessoDto.data_recebimento)
           : undefined,
@@ -187,6 +198,7 @@ export class ProcessosService {
     busca?: string,
     interessado?: string,
     unidadeRemetente?: string,
+    unidadeDestino?: string,
     vencendoHoje: boolean = false,
     atrasados: boolean = false,
     concluidos: boolean = false,
@@ -249,6 +261,12 @@ export class ProcessosService {
             OR: [{ nome: { contains: busca } }, { sigla: { contains: busca } }],
           },
         },
+        // Busca nos campos da unidade destino
+        {
+          unidadeDestino: {
+            OR: [{ nome: { contains: busca } }, { sigla: { contains: busca } }],
+          },
+        },
         // Busca nos campos dos andamentos
         {
           andamentos: {
@@ -278,6 +296,16 @@ export class ProcessosService {
         OR: [
           { nome: { contains: unidadeRemetente } },
           { sigla: { contains: unidadeRemetente } },
+        ],
+      };
+    }
+
+    // Filtro específico por unidade destino
+    if (unidadeDestino) {
+      searchParams.unidadeDestino = {
+        OR: [
+          { nome: { contains: unidadeDestino } },
+          { sigla: { contains: unidadeDestino } },
         ],
       };
     }
@@ -429,6 +457,7 @@ export class ProcessosService {
       include: {
         interessado: true, // Inclui dados do interessado
         unidadeRemetente: true, // Inclui dados da unidade remetente
+        unidadeDestino: true, // Inclui dados da unidade destino
         andamentos: {
           where: { ativo: true }, // Apenas andamentos ativos
           orderBy: { criadoEm: 'desc' }, // Andamentos mais recentes primeiro
@@ -482,6 +511,9 @@ export class ProcessosService {
     const processo = await this.prisma.processo.findUnique({
       where: { id },
       include: {
+        interessado: true, // Inclui dados do interessado
+        unidadeRemetente: true, // Inclui dados da unidade remetente
+        unidadeDestino: true, // Inclui dados da unidade destino
         andamentos: {
           where: { ativo: true }, // Apenas andamentos ativos
           orderBy: { criadoEm: 'desc' },
@@ -550,6 +582,9 @@ export class ProcessosService {
     const processo = await this.prisma.processo.findUnique({
       where: { numero_sei },
       include: {
+        interessado: true, // Inclui dados do interessado
+        unidadeRemetente: true, // Inclui dados da unidade remetente
+        unidadeDestino: true, // Inclui dados da unidade destino
         andamentos: {
           where: { ativo: true }, // Apenas andamentos ativos
           orderBy: { criadoEm: 'desc' },
@@ -635,6 +670,7 @@ export class ProcessosService {
     // Processa campos alternativos para interessado e unidade remetente
     let interessadoId: string | null = null;
     let unidadeRemetenteId: string | null = null;
+    let unidadeDestinoId: string | null = null;
 
     // Se recebeu interessado_id diretamente, valida se existe
     if (updateProcessoDto.interessado_id) {
@@ -707,6 +743,41 @@ export class ProcessosService {
       }
     }
 
+    // Se recebeu unidade_destino_id diretamente, valida se existe
+    if (updateProcessoDto.unidade_destino_id) {
+      const unidadeExistente = await this.prisma.unidade.findUnique({
+        where: { id: updateProcessoDto.unidade_destino_id },
+      });
+      if (!unidadeExistente) {
+        throw new BadRequestException('Unidade destinatária não encontrada.');
+      }
+      unidadeDestinoId = updateProcessoDto.unidade_destino_id;
+    }
+
+    // Se recebeu unidade_destino como string, busca a unidade
+    if (
+      updateProcessoDto.unidade_destino &&
+      typeof updateProcessoDto.unidade_destino === 'string' &&
+      updateProcessoDto.unidade_destino.trim() !== ''
+    ) {
+      const unidade = await this.prisma.unidade.findFirst({
+        where: {
+          OR: [
+            { nome: updateProcessoDto.unidade_destino.trim() },
+            { sigla: updateProcessoDto.unidade_destino.trim() },
+          ],
+          ativo: true,
+        },
+      });
+      if (unidade) {
+        unidadeDestinoId = unidade.id;
+      } else {
+        throw new BadRequestException(
+          `Unidade destinatária "${updateProcessoDto.unidade_destino}" não encontrada.`,
+        );
+      }
+    }
+
     // Prepara os dados para atualização
     const dadosAtualizacao: any = {
       numero_sei: updateProcessoDto.numero_sei,
@@ -737,6 +808,10 @@ export class ProcessosService {
 
     if (unidadeRemetenteId !== null && unidadeRemetenteId !== undefined) {
       dadosAtualizacao.unidade_remetente_id = unidadeRemetenteId;
+    }
+
+    if (unidadeDestinoId !== null && unidadeDestinoId !== undefined) {
+      dadosAtualizacao.unidade_destino_id = unidadeDestinoId;
     }
 
     // Atualiza o processo
